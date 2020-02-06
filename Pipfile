@@ -1,0 +1,21 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+verify_ssl = true
+
+[dev-packages]
+pyinstaller = "*"
+pylint = "*"
+yapf = "*"
+
+[packages]
+xlwings = "*"
+
+[requires]
+python_version = "3.8"
+
+[scripts]
+main="python nsf-gui.py"
+build="python build-release.py"
+clean="rm -rf *.spec build/ __pycache__/"
+cleanall="rm -rf *.spec build/ dist/ __pycache__/"
