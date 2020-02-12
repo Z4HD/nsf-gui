@@ -6,11 +6,11 @@ from tkinter import messagebox, ttk
 
 import xlwings as xl
 
-VERSION = "v1.0"
+VERSION = "v1.1 beta"
 
 # 检查环境
 if getattr(sys, 'frozen', False):  # 运行于 |PyInstaller| 二进制环境
-    basedir = sys._MEIPASS # pylint: disable=no-member
+    basedir = sys._MEIPASS  # pylint: disable=no-member
 else:  # 运行于一般Python 环境
     basedir = os.path.dirname(__file__)
 
@@ -56,6 +56,11 @@ class Application(tkinter.Frame):
         #init settings vars
         self.transposeBool = tkinter.BooleanVar(value=True)
         self.bypassRegExCheck = tkinter.BooleanVar(value=False)
+        #init methon vars
+        # select = getRangeBySelect()
+        # entry = getRangeByEntry()
+        self.methodToGetRange = tkinter.StringVar(value='select')
+        self.methodToGetRange.trace_add('write', self.refreshEntryState)
 
         #INIT FUNCTIONS
         super().__init__(master)
@@ -68,10 +73,15 @@ class Application(tkinter.Frame):
         #Fathers
         self.pW = ttk.PanedWindow(orient=tkinter.VERTICAL)
         self.statusLF = ttk.LabelFrame(self.pW, text='状态')
-        self.settingsLF = ttk.LabelFrame(self.pW, text='参数设置')
+        self.settingsLF = ttk.LabelFrame(self.pW, text='参数设置', padding=5)
+        self.rangeSelectorLF = ttk.LabelFrame(self.pW,
+                                              text='选择单元格范围',
+                                              padding=5)
         self.pW.add(self.statusLF)
         self.pW.add(self.settingsLF)
-        self.pW.grid(column=0, row=0, columnspan=3)
+        self.pW.add(self.rangeSelectorLF)
+        self.pW.grid(column=0, row=0, columnspan=3, padx=10, pady=10)
+
         #CurrentBook
         self.l2 = ttk.Label(self.statusLF, text='当前工作簿：')
         self.l2.grid(column=0, columnspan=1, row=0)
@@ -92,23 +102,50 @@ class Application(tkinter.Frame):
         self.transposeCBox = ttk.Checkbutton(self.settingsLF,
                                              text='垂直写入（Transpose）',
                                              variable=self.transposeBool)
-        self.transposeCBox.grid(row=1)
+        self.transposeCBox.grid(column=0, row=1)
         self.bypassRegExCheckBtn = ttk.Checkbutton(
             self.settingsLF, text='跳过正则表达式检查', variable=self.bypassRegExCheck)
         self.bypassRegExCheckBtn.grid(column=1, row=1)
 
+        #rangeSelector
+        #self.l1 = ttk.Label(self.rangeSelectorLF, text="输入待处理单元格范围（例：A1:A10）:")
+        #self.l1.grid(column=0, columnspan=1, row=1, padx=5, sticky=tkinter.E)
+        self.methodEntryRB = ttk.Radiobutton(self.rangeSelectorLF,
+                                             text="输入待处理单元格范围",
+                                             value='entry',
+                                             variable=self.methodToGetRange)
+        self.methodEntryRB.grid(column=0, row=0, sticky=tkinter.W)
+        self.e1 = ttk.Entry(self.rangeSelectorLF,
+                            textvariable=self.rangeText,
+                            state='disabled')
+        self.e1.grid(column=1,
+                     columnspan=1,
+                     row=0,
+                     rowspan=2,
+                     padx=5,
+                     pady=5,
+                     sticky=tkinter.E)
+        self.methodSelectRB = ttk.Radiobutton(self.rangeSelectorLF,
+                                              text='处理当前选中单元格',
+                                              value='select',
+                                              variable=self.methodToGetRange)
+        self.methodSelectRB.grid(column=0, row=1, sticky=tkinter.W)
         #Command
-        self.l1 = ttk.Label(text="输入待处理单元格范围（例：A1:A10）:")
-        self.l1.grid(column=0, columnspan=1, row=1, padx=5, sticky=tkinter.E)
-        self.e1 = ttk.Entry(textvariable=self.rangeText)
-        self.e1.grid(column=1, columnspan=2, row=1, pady=5, sticky=tkinter.W)
         self.refreshBtn = ttk.Button(text='刷新', command=self.refreshExcelState)
-        self.refreshBtn.grid(column=0, row=2, padx=5, sticky='w')
-        self.btn1 = ttk.Button(text='人名添加空格', command=self.doFormatJobs)
-        self.btn1.grid(column=2, row=2, padx=3, pady=5)
+        self.refreshBtn.grid(column=0, row=2, padx=10, sticky='w')
         self.removeSpaceBtn = ttk.Button(text='删除空格',
                                          command=self.removeAllSpace)
         self.removeSpaceBtn.grid(column=1, row=2, sticky='e')
+        self.btn1 = ttk.Button(text='人名添加空格', command=self.doFormatJobs)
+        self.btn1.grid(column=2, row=2, padx=10, pady=5, sticky='e')
+
+    def refreshEntryState(self,*keywords):
+        'When methon is select, disable the entry to prevent writ.'
+        t = self.methodToGetRange.get()
+        if t == 'select':
+            self.e1.state(['disabled'])
+        else:
+            self.e1.state(['!disabled'])
 
     @staticmethod
     def checkRangeText(rText):
@@ -163,6 +200,7 @@ class Application(tkinter.Frame):
             self.currentSheet.set(xl.books.active.sheets.active.name)
         except AttributeError:
             messagebox.showerror('ERROR', '无法检测到打开的工作簿，请检查Excel是否正在运行？')
+            return
 
 
 #INIT
