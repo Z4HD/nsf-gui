@@ -7,7 +7,7 @@ from tkinter import messagebox, ttk
 
 import xlwings as xl
 
-VERSION = "v1.1"
+VERSION = "v1.1-rc"
 
 # 检查环境
 if getattr(sys, 'frozen', False):  # 运行于 |PyInstaller| 二进制环境
@@ -30,6 +30,7 @@ def name_formatter(nameList: list, number=2):
     r = []
     for i in nameList:
         if isinstance(i, str) and len(i) == 2:
+            #TODO: add a setting entry to set the space number
             i = i[0] + ' ' * number + i[1]
         r.append(i)
     return r
@@ -46,7 +47,7 @@ def remove_all_space(nameList: list):
 
 
 class Application(tkinter.Frame):
-    def __init__(self, master=None):
+    def __init__(self, master: tkinter.Tk = None):
         #init xl objects
         self.currentSelectRange = None
         #init vars
@@ -68,6 +69,8 @@ class Application(tkinter.Frame):
         self.grid()
         self._createWidget()
         self.refreshExcelState()
+        self.master.bind('<FocusIn>',
+                         lambda *keywords: self.refreshExcelState())
 
     def _createWidget(self):
         #Fathers
