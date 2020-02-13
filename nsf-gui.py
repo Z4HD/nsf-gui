@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import tkinter
+import traceback
 from tkinter import messagebox, ttk
 
 import xlwings as xl
@@ -13,8 +14,6 @@ if getattr(sys, 'frozen', False):  # 运行于 |PyInstaller| 二进制环境
     basedir = sys._MEIPASS  # pylint: disable=no-member
 else:  # 运行于一般Python 环境
     basedir = os.path.dirname(__file__)
-
-#TODO: 检测当前打开的工作簿:app.selection
 
 
 #Tools Function
@@ -129,7 +128,8 @@ class Application(tkinter.Frame):
         self.methodSelectRB = ttk.Radiobutton(self.rangeSelectorLF,
                                               text='处理当前选中单元格',
                                               value='select',
-                                              variable=self.methodToGetRange)
+                                              variable=self.methodToGetRange,
+                                              command=self.refreshExcelState)
         self.methodSelectRB.grid(column=0, row=1, sticky=tkinter.W)
         #Command
         self.refreshBtn = ttk.Button(text='刷新', command=self.refreshExcelState)
@@ -151,6 +151,7 @@ class Application(tkinter.Frame):
     @staticmethod
     def checkRangeText(rText):
         "Check the Range text as A1:A10, return bool"
+        #FIXME: no D:D D2:D
         regex = re.compile('[A-Z][0-9]*:[A-Z][0-9]*')
         result = regex.match(rText)
         if result:
@@ -160,12 +161,8 @@ class Application(tkinter.Frame):
 
     def getRangeBySelect(self):
         "Get current selected range, return None if have problem"
-        try:
-            return xl.apps.active.selection.options(
-                transpose=self.transposeBool.get())
-        except AttributeError:
-            messagebox.showerror('AttributeError', '无法获取到当前选区，请检查Excel是否正在运行。')
-            raise
+        return xl.apps.active.selection.options(
+            transpose=self.transposeBool.get())
 
     def getRangeByEntry(self):
         "Get current range by the entry's value, return None if have problem"
@@ -173,19 +170,33 @@ class Application(tkinter.Frame):
         if not self.bypassRegExCheck.get() and not self.checkRangeText(rT):
             messagebox.showerror('rangeText Error', '单元格范围格式不正确')
             return None
-        try:
-            sR = xl.Range(rT).options(transpose=self.transposeBool.get())
-        except AttributeError:
-            messagebox.showerror('AttributeError', '无法获取当前工作簿，请检查Excel是否正在运行？')
-            raise
+        sR = xl.Range(rT).options(transpose=self.transposeBool.get())
         return sR
 
     def getExcelRange(self):
         "Get current range, return None if have problem"
-        if self.methodToGetRange.get()=='select':
-            return self.getRangeBySelect()
-        else:
-            return self.getRangeByEntry()
+        try:
+            if self.methodToGetRange.get() == 'select':
+                return self.getRangeBySelect()
+            else:
+                return self.getRangeByEntry()
+        except AttributeError:
+            messagebox.showerror('AttributeError', '无法获取当前工作簿，请检查Excel是否正在运行？')
+            raise
+        except:
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            tbL = traceback.format_exception(exc_type, exc_value,
+                                             exc_traceback)
+            tbS = ''
+            for i in tbL:
+                tbS = tbS + '\n' + i
+            if exc_type.__module__:
+                eTitle = f'{exc_type.__module__}.{exc_type.__name__}'
+            else:
+                eTitle = str(exc_type.__name__)
+            # May replace the tbS as traceback.format_exception_only()
+            messagebox.showerror(eTitle, tbS)
+            raise
 
     def replaceRangeValue(self, target: xl.Range, out):
         origin = target.value
@@ -215,8 +226,8 @@ class Application(tkinter.Frame):
         try:
             self.currentBook.set(xl.books.active.name)
             self.currentSheet.set(xl.books.active.sheets.active.name)
-            if self.methodToGetRange.get()=='select':
-                sR=self.getRangeBySelect()
+            if self.methodToGetRange.get() == 'select':
+                sR = self.getRangeBySelect()
                 self.rangeText.set(sR.get_address(False, False))
         except AttributeError:
             messagebox.showerror('ERROR', '无法检测到打开的工作簿，请检查Excel是否正在运行？')
