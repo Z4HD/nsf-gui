@@ -6,7 +6,7 @@ from tkinter import messagebox, ttk
 
 import xlwings as xl
 
-VERSION = "v1.1 beta"
+VERSION = "v1.1"
 
 # 检查环境
 if getattr(sys, 'frozen', False):  # 运行于 |PyInstaller| 二进制环境
@@ -36,7 +36,6 @@ def name_formatter(nameList: list, number=2):
     return r
 
 
-#TODO: A Function to remove all space
 def remove_all_space(nameList: list):
     "Return a list without any space"
     r = []
@@ -49,6 +48,8 @@ def remove_all_space(nameList: list):
 
 class Application(tkinter.Frame):
     def __init__(self, master=None):
+        #init xl objects
+        self.currentSelectRange = None
         #init vars
         self.rangeText = tkinter.StringVar()
         self.currentBook = tkinter.StringVar()
@@ -66,10 +67,10 @@ class Application(tkinter.Frame):
         super().__init__(master)
         self.master = master
         self.grid()
-        self.createWidget()
+        self._createWidget()
         self.refreshExcelState()
 
-    def createWidget(self):
+    def _createWidget(self):
         #Fathers
         self.pW = ttk.PanedWindow(orient=tkinter.VERTICAL)
         self.statusLF = ttk.LabelFrame(self.pW, text='状态')
@@ -139,7 +140,7 @@ class Application(tkinter.Frame):
         self.btn1 = ttk.Button(text='人名添加空格', command=self.doFormatJobs)
         self.btn1.grid(column=2, row=2, padx=10, pady=5, sticky='e')
 
-    def refreshEntryState(self,*keywords):
+    def refreshEntryState(self, *keywords):
         'When methon is select, disable the entry to prevent writ.'
         t = self.methodToGetRange.get()
         if t == 'select':
@@ -157,8 +158,17 @@ class Application(tkinter.Frame):
         else:
             return False
 
-    def getExcelRange(self):
-        "Get current range, return None if have problem"
+    def getRangeBySelect(self):
+        "Get current selected range, return None if have problem"
+        try:
+            return xl.apps.active.selection.options(
+                transpose=self.transposeBool.get())
+        except AttributeError:
+            messagebox.showerror('AttributeError', '无法获取到当前选区，请检查Excel是否正在运行。')
+            raise
+
+    def getRangeByEntry(self):
+        "Get current range by the entry's value, return None if have problem"
         rT = self.rangeText.get()
         if not self.bypassRegExCheck.get() and not self.checkRangeText(rT):
             messagebox.showerror('rangeText Error', '单元格范围格式不正确')
@@ -169,6 +179,13 @@ class Application(tkinter.Frame):
             messagebox.showerror('AttributeError', '无法获取当前工作簿，请检查Excel是否正在运行？')
             raise
         return sR
+
+    def getExcelRange(self):
+        "Get current range, return None if have problem"
+        if self.methodToGetRange.get()=='select':
+            return self.getRangeBySelect()
+        else:
+            return self.getRangeByEntry()
 
     def replaceRangeValue(self, target: xl.Range, out):
         origin = target.value
@@ -198,6 +215,9 @@ class Application(tkinter.Frame):
         try:
             self.currentBook.set(xl.books.active.name)
             self.currentSheet.set(xl.books.active.sheets.active.name)
+            if self.methodToGetRange.get()=='select':
+                sR=self.getRangeBySelect()
+                self.rangeText.set(sR.get_address(False, False))
         except AttributeError:
             messagebox.showerror('ERROR', '无法检测到打开的工作簿，请检查Excel是否正在运行？')
             return
@@ -209,7 +229,7 @@ root = tkinter.Tk()
 # set ICON
 root.iconbitmap(os.path.join(basedir, 'icon.ico'))
 
-root.title(F"Excel 单元格人名空格补齐实用程序 {VERSION}")
+root.title(f"人名空格补齐实用程序 {VERSION}")
 root.resizable(False, False)
 app = Application(root)
 app.mainloop()
