@@ -151,8 +151,7 @@ class Application(tkinter.Frame):
     @staticmethod
     def checkRangeText(rText):
         "Check the Range text as A1:A10, return bool"
-        #FIXME: no D:D D2:D
-        regex = re.compile('[A-Z][0-9]*:[A-Z][0-9]*')
+        regex = re.compile('^[A-Z]{1,2}[0-9]+:[A-Z]{1,2}[0-9]+$')
         result = regex.match(rText)
         if result:
             return True
