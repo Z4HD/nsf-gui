@@ -7,7 +7,7 @@ from tkinter import messagebox, ttk
 
 import xlwings as xl
 
-VERSION = "v1.1-rc"
+VERSION = "v1.1"
 
 # 检查环境
 if getattr(sys, 'frozen', False):  # 运行于 |PyInstaller| 二进制环境
@@ -57,6 +57,7 @@ class Application(tkinter.Frame):
         #init settings vars
         self.transposeBool = tkinter.BooleanVar(value=True)
         self.bypassRegExCheck = tkinter.BooleanVar(value=False)
+        self.autoRefresh = tkinter.BooleanVar(value=True)
         #init methon vars
         # select = getRangeBySelect()
         # entry = getRangeByEntry()
@@ -135,7 +136,7 @@ class Application(tkinter.Frame):
                                               command=self.refreshExcelState)
         self.methodSelectRB.grid(column=0, row=1, sticky=tkinter.W)
         #Command
-        self.refreshBtn = ttk.Button(text='刷新', command=self.refreshExcelState)
+        self.refreshBtn = ttk.Button(text='刷新', command=self.refreshBtnOnClick)
         self.refreshBtn.grid(column=0, row=2, padx=10, sticky='w')
         self.removeSpaceBtn = ttk.Button(text='删除空格',
                                          command=self.removeAllSpace)
@@ -225,15 +226,22 @@ class Application(tkinter.Frame):
         self.replaceRangeValue(targetRange, result)
 
     def refreshExcelState(self):
-        try:
-            self.currentBook.set(xl.books.active.name)
-            self.currentSheet.set(xl.books.active.sheets.active.name)
-            if self.methodToGetRange.get() == 'select':
-                sR = self.getRangeBySelect()
-                self.rangeText.set(sR.get_address(False, False))
-        except AttributeError:
-            messagebox.showerror('ERROR', '无法检测到打开的工作簿，请检查Excel是否正在运行？')
-            return
+        if self.autoRefresh.get():
+            try:
+                self.currentBook.set(xl.books.active.name)
+                self.currentSheet.set(xl.books.active.sheets.active.name)
+                if self.methodToGetRange.get() == 'select':
+                    sR = self.getRangeBySelect()
+                    self.rangeText.set(sR.get_address(False, False))
+            except AttributeError:
+                self.autoRefresh.set(False)
+                errMsg = '无法检测到打开的工作簿，请检查Excel是否正在运行？\n自动刷新已停止，请手动单击 “刷新” 按钮刷新状态。'
+                messagebox.showerror('ERROR', errMsg)
+
+    def refreshBtnOnClick(self):
+        "command function for refreshBtn"
+        self.autoRefresh.set(True)
+        self.refreshExcelState()
 
 
 #INIT
