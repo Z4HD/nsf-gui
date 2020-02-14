@@ -2,6 +2,8 @@
 
 本程序可以快速批量对 Excel 中指定单元格内由两个汉字组成的姓名中间添加空格，使其*看起来*与三个汉字组成的姓名“两端对齐”。
 
+![pnf-demo.gif](https://i.loli.net/2020/02/14/2f3vIj6DqbZJdlu.gif)
+
 ## TOC <!-- omit in toc -->
 
 - [下载安装](#%e4%b8%8b%e8%bd%bd%e5%ae%89%e8%a3%85)
